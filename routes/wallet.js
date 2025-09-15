@@ -1,27 +1,24 @@
-// routes/wallet.js
-const express = require("express");
-const router = express.Router();
-const auth = require("../middleware/auth");
-const WalletTx = require("../models/WalletTransaction");
-const User = require("../models/User");
-const Post = require("../models/Post");
+import express from "express";
+import auth from "../middleware/auth.js";
+import WalletTx from "../models/WalletTransaction.js";
+import User from "../models/User.js";
+import Post from "../models/Post.js";
+import mongoose from "mongoose";
 
-// GET /wallet -> balance
+const router = express.Router();
+
 // GET /wallet -> balance + profile
 router.get("/", auth, async (req, res) => {
     try {
-        const user = await User.findById(req.user._id).select("name email avatar wallet_balance");
+        const user = await User.findById(req.user._id).select("name email avatar wallet_coins wallet_rupees");
         if (!user) return res.status(404).json({ message: "User not found" });
 
-        const coins = user.wallet_balance || 0;
-        const rupees = (coins / 10).toFixed(2);
-
         res.json({
-            name: user.name,   // ✅ correct field
+            name: user.name,
             email: user.email,
             avatar: user.avatar,
-            coins,
-            rupees,
+            coins: user.wallet_coins || 0,
+            rupees: user.wallet_rupees || 0,
         });
     } catch (err) {
         console.error("GET /wallet error:", err);
@@ -29,71 +26,78 @@ router.get("/", auth, async (req, res) => {
     }
 });
 
-
-
-// POST /wallet/payout
+// POST /wallet/payout  
 router.post("/payout", auth, async (req, res) => {
     try {
         const user = await User.findById(req.user._id);
-        const coins = user.wallet_balance || 0;
-        if (coins <= 0) return res.status(400).json({ message: "No balance to payout" });
+        const rupees = user.wallet_rupees || 0;
+        if (rupees <= 0) return res.status(400).json({ message: "No balance to payout" });
 
-        await WalletTx.create({ user: user._id, coins: -coins, type: "payout" });
-        user.wallet_balance = 0;
+        await WalletTx.create({
+            user: user._id,
+            rupees: rupees,
+            type: "payment under process"
+        });
+        user.wallet_coins = 0;
+        user.wallet_rupees = 0;
         await user.save();
 
         res.json({
+            wallet: {
+                coins: 0,
+                rupees: 0,
+            },
+            transaction: {
+                requestDate: new Date().toISOString(),
+                amount: rupees,
+                process: "payment under process",
+            },
             message: "Payout requested",
-            coins,
-            rupees: (coins / 10).toFixed(2),
+
         });
     } catch (err) {
         console.error("Payout error:", err);
         res.status(500).json({ message: "Server error" });
     }
 });
-// routes/wallet.js
+
+// POST /wallet/watch/:postId
 router.post("/watch/:postId", auth, async (req, res) => {
     try {
         const { postId } = req.params;
-        console.log("Post ID:", postId);
 
-        const user = await User.findById(req.user._id);
-        console.log("User:", user);
+        if (!postId || !mongoose.Types.ObjectId.isValid(postId)) {
+            return res.status(400).json({ message: "Invalid post ID" });
+        }
 
         const post = await Post.findById(postId);
-        console.log("Post:", post);
-
         if (!post) return res.status(404).json({ message: "Post not found" });
 
         const userIdStr = req.user._id.toString();
         let coinsEarned = 0;
 
         const alreadyViewed = post.viewedBy.some(id => id.toString() === userIdStr);
-        console.log("Already viewed?", alreadyViewed);
+        let creator;
 
         if (!alreadyViewed) {
+            // Update post views
             post.views += 1;
             post.viewedBy.push(req.user._id);
             await post.save();
 
-            coinsEarned = 10;
-            user.wallet_balance = (user.wallet_balance || 0) + coinsEarned;
-            await user.save();
-
-            await WalletTx.create({
-                user: user._id,
-                coins: coinsEarned,
-                type: "earn",
-                meta: { postId },
-            });
+            creator = await User.findById(post.creator_id);
+            if (creator) {
+                coinsEarned = 10;
+                creator.wallet_coins = (creator.wallet_coins || 0) + coinsEarned;
+                creator.wallet_rupees = creator.wallet_coins / 10;
+                await creator.save();
+            }
         }
-
         res.json({
             message: alreadyViewed ? "Already watched" : "View counted and coins added",
             views: post.views,
-            coins: user.wallet_balance,
-            rupees: (user.wallet_balance / 10).toFixed(2),
+            coins: creator?.wallet_coins || 0,
+            rupees: creator?.wallet_rupees || 0,
         });
     } catch (err) {
         console.error("Watch error:", err);
@@ -101,17 +105,18 @@ router.post("/watch/:postId", auth, async (req, res) => {
     }
 });
 
+// GET /wallet/transactions
 router.get("/transactions", auth, async (req, res) => {
     try {
         const txs = await WalletTx.find({ user: req.user._id })
-            .sort({ createdAt: -1 }) // latest first
+            .sort({ createdAt: -1 })
             .lean();
 
         res.json(
             txs.map(tx => ({
                 requestDate: tx.createdAt,
-                amount: tx.coins,
-                process: tx.type, // "earn" or "payout"
+                amount: tx.rupees,
+                process: tx.type,
             }))
         );
     } catch (err) {
@@ -120,4 +125,4 @@ router.get("/transactions", auth, async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

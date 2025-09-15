@@ -1,14 +1,13 @@
-// models/WalletTransaction.js
-const { Schema, model } = require("mongoose");
+import { Schema, model } from "mongoose";
 
 const walletTransactionSchema = new Schema(
     {
         user: { type: Schema.Types.ObjectId, ref: "User", required: true },
-        coins: { type: Number, required: true },
-        type: { type: String, enum: ["earn", "payout"], required: true },
+        rupees: { type: Number, required: true },
+        type: { type: String, enum: ["payment under process", "payment approved"], required: true },
         meta: { type: Object },
     },
     { timestamps: true }
 );
 
-module.exports = model("WalletTransaction", walletTransactionSchema);
+export default model("WalletTransaction", walletTransactionSchema);

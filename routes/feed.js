@@ -1,15 +1,14 @@
-// routes/feed.js
-const express = require("express");
-const Post = require("../models/Post");
-const auth = require("../middleware/auth");
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+import express from "express";
+import Post from "../models/Post.js";
+import auth from "../middleware/auth.js";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 const router = express.Router();
 
 // ensure uploads directory exists
-const UPLOAD_DIR = path.join(__dirname, "..", "uploads");
+const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 // multer storage
@@ -20,7 +19,19 @@ const storage = multer.diskStorage({
         cb(null, Date.now() + "-" + Math.round(Math.random() * 1e9) + ext);
     },
 });
-const upload = multer({ storage });
+const upload = multer({
+    storage,
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only image and video files are allowed'), false);
+        }
+    },
+    limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB limit
+    }
+});
 
 // GET /feed
 router.get("/", async (req, res) => {
@@ -74,4 +85,4 @@ router.post("/upload", auth, upload.single("file"), async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

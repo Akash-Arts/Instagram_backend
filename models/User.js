@@ -1,5 +1,4 @@
-// models/User.js
-const { Schema, model } = require("mongoose");
+import { Schema, model } from "mongoose";
 
 const userSchema = new Schema(
     {
@@ -7,9 +6,10 @@ const userSchema = new Schema(
         avatar: { type: String, default: "" },
         email: { type: String, required: true, unique: true },
         password: { type: String, required: true },
-        wallet_balance: { type: Number, default: 0 },
+        wallet_coins: { type: Number, default: 0 },
+        wallet_rupees: { type: Number, default: 0 }
     },
     { timestamps: true }
 );
 
-module.exports = model("User", userSchema);
+export default model("User", userSchema);

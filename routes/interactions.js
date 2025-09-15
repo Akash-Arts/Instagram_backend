@@ -1,8 +1,8 @@
-// routes/interactions.js
-const express = require("express");
+import express from "express";
+import Post from "../models/Post.js";
+import auth from "../middleware/auth.js";
+
 const router = express.Router();
-const Post = require("../models/Post");
-const auth = require("../middleware/auth");
 
 // Like a post
 router.post("/:postId/like", auth, async (req, res) => {
@@ -27,7 +27,6 @@ router.post("/:postId/like", auth, async (req, res) => {
   }
 });
 
-
 // Save a post
 router.post("/:postId/save", auth, async (req, res) => {
   try {
@@ -36,7 +35,6 @@ router.post("/:postId/save", auth, async (req, res) => {
 
     const post = await Post.findById(postId);
     if (!post) return res.status(404).json({ message: "Post not found" });
-
     const alreadySaved = post.savedBy.some(id => id.toString() === userIdStr);
     if (alreadySaved) return res.status(400).json({ message: "Already saved" });
 
@@ -47,29 +45,6 @@ router.post("/:postId/save", auth, async (req, res) => {
     res.json({ saves: post.saves });
   } catch (error) {
     console.error("Save error:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// View a post
-router.post("/:postId/view", auth, async (req, res) => {
-  try {
-    const { postId } = req.params;
-    const userIdStr = req.user._id.toString();
-
-    const post = await Post.findById(postId);
-    if (!post) return res.status(404).json({ message: "Post not found" });
-
-    const alreadyViewed = post.viewedBy.some(id => id.toString() === userIdStr);
-    if (!alreadyViewed) {
-      post.views += 1;
-      post.viewedBy.push(req.user._id);
-      await post.save();
-    }
-
-    res.json({ views: post.views });
-  } catch (error) {
-    console.error("View error:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -134,7 +109,8 @@ router.get("/:postId/comments", async (req, res) => {
       _id: c._id,
       text: c.text,
       createdAt: c.createdAt,
-      user: c.userId ? c.userId.name : c.username || "Unknown"
+      username: c.userId ? c.userId.name : c.username || "Unknown",
+      avatar: c.userId?.avatar || ""
     }));
 
     res.json({ comments });
@@ -144,4 +120,4 @@ router.get("/:postId/comments", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

@@ -15,8 +15,8 @@ const postData = [
         url: "https://picsum.photos/400/300?random=3",
         content: "Nature walk today 🌿",
         comments: [
-            { user: "Alice", text: "Looks amazing!" },
-            { user: "Bob", text: "Nice view 😍" },
+            { username: "Alice", text: "Looks amazing!" },
+            { username: "Bob", text: "Nice view 😍" },
         ],
     },
     {
@@ -24,8 +24,8 @@ const postData = [
         url: "https://www.w3schools.com/html/movie.mp4",
         content: "My new painting 🎨",
         comments: [
-            { user: "Alice", text: "Beautiful work!" },
-            { user: "Bob", text: "So talented 👏" },
+            { username: "Alice", text: "Beautiful work!" },
+            { username: "Bob", text: "So talented 👏" },
         ],
     },
     {
@@ -60,4 +60,4 @@ const postData = [
     },
 ];
 
-module.exports = postData;
+export default postData;

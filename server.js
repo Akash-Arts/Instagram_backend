@@ -1,16 +1,16 @@
-// server.js
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import seedDatabase from "./db/seed.js";
 
+// Import routes
 import authRouter from "./routes/auth.js";
 import feedRouter from "./routes/feed.js";
 import interactionsRouter from "./routes/interactions.js";
 import walletRouter from "./routes/wallet.js";
+import seedDatabase from "./db/seed.js";
 
 dotenv.config();
 const app = express();
@@ -24,6 +24,9 @@ const __dirname = path.dirname(__filename);
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploads statically
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Routers
 app.use("/auth", authRouter);
